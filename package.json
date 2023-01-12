@@ -1,0 +1,19 @@
+{
+  "name": "releases",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "ts-node src/index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^18.11.18",
+    "axios": "^1.2.2",
+    "fast-glob": "^3.2.12",
+    "form-data": "^4.0.0",
+    "node-native-zip": "^1.1.0",
+    "ts-node": "^10.9.1"
+  }
+}

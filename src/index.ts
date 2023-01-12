@@ -1,11 +1,11 @@
 import Axios, {AxiosRequestConfig} from "axios"
 import {Config, UrlType, GetApiPptions, ReleasesImplements, CreateOptopns} from "./index.d"
-import {template, merge} from "lodash"
+import {template, merge, get} from "lodash"
 import {resolve} from "path"
-import {writeFileSync} from "fs"
 import {sync} from "fast-glob"
 import {Pattern as PatternInternal} from "fast-glob/out/types";
 import FormData from "form-data";
+import dayjs from "dayjs";
 const zip = require("node-native-zip");
 export const urlType = {
     list: {
@@ -45,11 +45,7 @@ export class Releases implements ReleasesImplements {
     }
 
     config = {
-        token: "2dGoxoGhfNLcPzaSbr5e",
-        host: 'https://gitlab.zhijiasoft.com',
-        baseURL: '/api/v4',
-        projectName: 'xuyi/testproject',
-    }
+    } as Config
 
     getApi(apiTypeName: keyof UrlType, {
         projectName,
@@ -71,6 +67,38 @@ export class Releases implements ReleasesImplements {
             data: merge({}, urlTypeConfig.data, data),
             params: merge({}, urlTypeConfig.params, params),
         }, config)
+    }
+
+    async uploadAssetsFile(zipDir:any, data:any, filename?:string):Promise<any>{
+        if(!zipDir){
+            return data
+        }
+        const assetsFileName = `${filename || 'dist'}.zip`
+        const file = await this.getZipBuff(zipDir)
+        const form = new FormData();
+        form.append('file', file, {
+            filename:assetsFileName
+        });
+        const config = await this.getApi('uploadFile', {
+            config:{
+                headers:{
+                    ...form.getHeaders()
+                }
+            }
+        })
+        config.data = form
+        const {data:{markdown, url}} = await axios(config)
+        const links = [{
+            name: assetsFileName,
+            url:`${this.config.host}/${this.config.projectName}${url}`
+        }].concat(get(data, 'assets.links', []))
+        return  {
+            ...data,
+            description:`${data.description}\n\n**Assets资源**：${markdown}\n\n**最新发布时间**：${dayjs().format('YYYY-MM-DD HH:mm:ss')}`,
+            assets:{
+                links
+            }
+        }
     }
 
     async getZipBuff(source:PatternInternal | PatternInternal[]):Promise<Buffer>{
@@ -95,38 +123,19 @@ export class Releases implements ReleasesImplements {
         }))).data
     }
 
-    async create(data: CreateOptopns) {
+    async create({zipDir, filename, ...data}: CreateOptopns) {
         return (await axios(this.getApi('create', {
-            data
+            data:await this.uploadAssetsFile(zipDir, data, filename)
         }))).data
     }
 
-    async update({zipDir, ...data}: CreateOptopns) {
-        const form = new FormData();
-        form.append('file', (await this.getZipBuff('dist/*')).toString('binary'));
-        axios(await this.getApi('uploadFile', {
-            data: {
-                file:form.getBuffer()
-            },
-            config:{
-                headers:{
-                    'Content-Type':"multipart/form-data;"
-                }
+    async update({zipDir, filename, ...data}: CreateOptopns) {
+        return (await axios(this.getApi('update', {
+            data:await this.uploadAssetsFile(zipDir, data, filename),
+            urlData:{
+                tag_name:data.tag_name
             }
-        })).then(res=>{
-            console.log(111, res.data)
-        }).catch(err=>{
-            console.log(222,err.response.request.headers)
-            console.log(222,err.response.request.data)
-            console.log(222,err.response.data)
-        })
-
-        // return (await axios(this.getApi('update', {
-        //     data,
-        //     urlData:{
-        //         tag_name:data.tag_name
-        //     }
-        // }))).data
+        }))).data
     }
 
     async delete(data: CreateOptopns) {
@@ -139,40 +148,4 @@ export class Releases implements ReleasesImplements {
     }
 }
 
-const releasesObj = new Releases()
-
-// releasesObj.list().then(res => {
-//     console.log(res.find(e => e.name === 'New release'))
-// })
-//
-// releasesObj.getTag('0.1.6').then(res => {
-//     console.log(res)
-// })
-
-// releasesObj.create({
-//     name: "release v0.1.7",
-//     tag_name: "0.1.7",
-//     description: "Super nice release",
-//     // "milestones": ["v0.1.6"],
-//     ref:'main',
-//     assets: {"links": [{"name": "hoge", "url": "https://google.com"}]}
-// }).then(res => {
-//     console.log(res)
-// })
-
-releasesObj.update({
-    "tag_name": "0.1.7",
-    "description": `
-        # asdasd
-    `,
-    zipDir:'dist/**',
-    "assets": {"links": [{"name": "hoge", "url": "https://google.com"}]},
-}).then(res => {
-    console.log(res)
-})
-
-// releasesObj.delete({
-//     "tag_name": "v0.1.7",
-// }).then(res => {
-//     console.log(res)
-// })
+export default Releases

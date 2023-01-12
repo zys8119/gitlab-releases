@@ -5,7 +5,7 @@ export type ProjectName = string | number
 export interface Config  {
     [key:string]:any
     token:string
-    baseURL?:string
+    baseURL:string
     host:string
     projectName:ProjectName
 }
@@ -32,6 +32,7 @@ export type ReleasesImplements = {
     getApi<T extends keyof UrlType>(apiTypeName:T, options?:Partial<GetApiPptions>):UrlType[T]
 
     getZipBuff(source:PatternInternal | PatternInternal[]):Promise<Buffer>
+    uploadAssetsFile(zipDir:any, data:any, filename?:string):Promise<any>
 
     /**
      * 获取Releases列表
@@ -82,5 +83,6 @@ export type CreateOptopns = {
     }
     released_at?:Date | string
     zipDir?:PatternInternal | PatternInternal[]
+    filename?:string
 }
 

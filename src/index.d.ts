@@ -1,5 +1,5 @@
 import Axios, {AxiosRequestConfig} from "axios"
-import {urlType} from "./index"
+import {urlType, Releases as ReleasesClass} from "./index"
 import {Pattern as PatternInternal} from "fast-glob/out/types";
 export type ProjectName = string | number
 export interface Config  {
@@ -86,3 +86,6 @@ export type CreateOptopns = {
     filename?:string
 }
 
+export const Releases:typeof ReleasesClass
+
+export default Releases

@@ -1,6 +1,6 @@
 {
   "name": "gitlab-releases",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "",
   "main": "dist/index.js",
   "types": "src/index.d.ts",
@@ -18,8 +18,8 @@
     "dayjs": "^1.11.7",
     "fast-glob": "^3.2.12",
     "form-data": "^4.0.0",
+    "jszip": "^3.10.1",
     "lodash": "^4.17.21",
-    "node-native-zip": "^1.1.0",
     "ts-node": "^10.9.1"
   },
   "devDependencies": {

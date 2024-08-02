@@ -1,13 +1,18 @@
-import Axios, {AxiosRequestConfig} from "axios"
-import {urlType, Releases as ReleasesClass} from "./index"
+import {AxiosRequestConfig} from "axios"
+import { Releases as ReleasesClass} from "./index"
 import {Pattern as PatternInternal} from "fast-glob/out/types";
+import {JSZipFileOptions} from "jszip";
 export type ProjectName = string | number
 export interface Config  {
     [key:string]:any
     token:string
     baseURL:string
     host:string
-    projectName:ProjectName
+    projectName:ProjectName,
+    zipOptions:JSZipFileOptions
+    uploadAssetsFileBefore(data:Record<any,any>):Record<any,any>
+    axiosBefore(data:Record<any,any>,config:Record<any,any>):Record<any,any>
+    urlType:Record<any, AxiosRequestConfig>
 }
 export type GetApiPptions = {
     // 项目名称

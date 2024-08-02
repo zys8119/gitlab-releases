@@ -2,11 +2,12 @@ import Axios, {AxiosRequestConfig} from "axios"
 import {Config, UrlType, GetApiPptions, ReleasesImplements, CreateOptopns} from "./index.d"
 import {template, merge, get} from "lodash"
 import {resolve} from "path"
+import {readFileSync} from "fs"
 import {sync} from "fast-glob"
 import {Pattern as PatternInternal} from "fast-glob/out/types";
 import FormData from "form-data";
 import dayjs from "dayjs";
-const zip = require("node-native-zip");
+import jszip from "jszip"
 export const urlType = {
     list: {
         method: 'get',
@@ -40,8 +41,7 @@ export class Releases implements ReleasesImplements {
     archive:any = {}
     constructor(config?: Partial<Config>) {
         this.config = merge(this.config, config)
-
-        this.archive = new zip();
+        this.archive = new jszip();
     }
 
     config = {
@@ -54,8 +54,9 @@ export class Releases implements ReleasesImplements {
         params,
         config
     } = {} as Partial<GetApiPptions>) {
-        const urlTypeConfig: AxiosRequestConfig = merge({}, urlType[apiTypeName])
-        return merge({
+        const urlTypeMap = merge({}, urlType,this.config.urlType)
+        const urlTypeConfig: AxiosRequestConfig = merge({}, urlTypeMap[apiTypeName])
+        const mc = merge({
             method: urlTypeConfig.method,
             baseURL: `${this.config.host}${this.config.baseURL}${template(urlTypeConfig.url || '')({
                 id: encodeURIComponent(projectName || this.config.projectName),
@@ -67,6 +68,7 @@ export class Releases implements ReleasesImplements {
             data: merge({}, urlTypeConfig.data, data),
             params: merge({}, urlTypeConfig.params, params),
         }, config)
+        return this.config.axiosBefore?.(mc, urlTypeConfig) || mc
     }
 
     async uploadAssetsFile(zipDir:any, data:any, filename?:string):Promise<any>{
@@ -92,22 +94,32 @@ export class Releases implements ReleasesImplements {
             name: assetsFileName,
             url:`${this.config.host}/${this.config.projectName}${url}`
         }].concat(get(data, 'assets.links', []))
-        return  {
+        const result = {
             ...data,
             description:`${data.description}\n\n**Assets资源**：${markdown}\n\n**最新发布时间**：${dayjs().format('YYYY-MM-DD HH:mm:ss')}`,
             assets:{
                 links
             }
         }
+        return  await this.config.uploadAssetsFileBefore?.(result) || result
     }
 
     async getZipBuff(source:PatternInternal | PatternInternal[]):Promise<Buffer>{
         const files = sync(source, {cwd: process.cwd()}).map(e => ({name: e, path: resolve(process.cwd(), e)}))
         return await new Promise((r, j)=>{
-            this.archive.addFiles(files, (err)=>{
-                if (err) j(err);
-                r(this.archive.toBuffer())
-            })
+            try{
+                files.forEach(e=>{
+                    this.archive.file(e.name, readFileSync(e.path),merge({},this.config.zipOptions,{
+                        compression:"DEFLATE",
+                        compressionOptions:{
+                            level:9
+                        }
+                    }))
+                })
+                r(this.archive.generateAsync({type:"nodebuffer"}))
+            }catch(e){
+                j(e)
+            }
         })
     }
 
